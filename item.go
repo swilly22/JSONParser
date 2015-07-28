@@ -1,4 +1,4 @@
-package json_parser
+package main
 
 import (
 	"fmt"

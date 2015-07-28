@@ -1,7 +1,7 @@
-package json_parser
+package main
 
 import (
-	"strings"
+	"fmt"
 )
 
 // stateFunc represents the state of the scanner
@@ -9,6 +9,8 @@ import (
 type stateFunc func(*lexer) stateFunc
 
 func initState(l *lexer) stateFunc {
+	fmt.Println("in initState")
+
 	r := l.peek()
 	if r == leftMeta {
 		return lexLeftMeta
@@ -17,41 +19,27 @@ func initState(l *lexer) stateFunc {
 	return l.errorf("json must begin with '{'")
 }
 
-func lextText(l *lexer) stateFunc {
-	for {
-		if strings.HasPrefix(l.input[l.pos:], "{") {
-			if l.pos > l.start {
-				l.emit(itemText)
-			}
-			return lexLeftMeta // Next state.
-		}
-		if l.next() == eof {
-			break
-		}
-	}
-	// Correctly reached EOF.
-	if l.pos > l.start {
-		l.emit(itemText)
-	}
-	l.emit(itemEOF)
-	return nil
-}
-
 func lexLeftMeta(l *lexer) stateFunc {
+	fmt.Println("in lexLeftMeta")
+
 	l.pos += len("{")
 	l.emit(itemLeftMeta)
 	return lexInsideObject // Now inside {}.
 }
 
 func lexRightMeta(l *lexer) stateFunc {
+	fmt.Println("in lexRightMeta")
+
 	l.pos += len("}")
 	l.emit(itemRightMeta)
 	return lexOutsideObject
 }
 
 func lexInsideObject(l *lexer) stateFunc {
+	fmt.Println("in lexInsideObject")
+
 	// Expecting either an identifier or '}'
-	switch r := l.next(); {
+	switch r := l.peek(); {
 	case r == eof:
 		return l.errorf("unclosed object")
 	case isAlphaNumeric(r):
@@ -64,30 +52,42 @@ func lexInsideObject(l *lexer) stateFunc {
 }
 
 func lexOutsideObject(l *lexer) stateFunc {
-	// Expecting either ',' or eof
-	switch r := l.next(); {
+	fmt.Println("in lexOutsideObject")
+
+	// Expecting either ',', ']', '}' or eof
+	switch r := l.peek(); {
 	case r == eof:
 		// we're done
 		return nil
 	case r == comma:
 		return lexComma
+	case r == rightBracket:
+		return lexRightBracket
+	case r == rightMeta:
+		return lexRightMeta
 	}
 	return l.errorf("invalid elemnt after right meta")
 }
 
 func lexLeftBracket(l *lexer) stateFunc {
+	fmt.Println("in lexLeftBracket")
+
 	l.pos += len("[")
 	l.emit(itemLeftBracket)
 	return lexInsideArray
 }
 
 func lexRightBracket(l *lexer) stateFunc {
+	fmt.Println("in lexRightBracket")
+
 	l.pos += len("]")
 	l.emit(itemRightBracket)
 	return lexOutsideArray
 }
 
 func lexInsideArray(l *lexer) stateFunc {
+	fmt.Println("in lexInsideArray")
+
 	// expecting either Number, String, '[', ']', '{'
 	switch r := l.peek(); {
 	case isNumeric(r):
@@ -106,42 +106,46 @@ func lexInsideArray(l *lexer) stateFunc {
 }
 
 func lexOutsideArray(l *lexer) stateFunc {
-	// expecting either ',' or '}'
-	switch r := l.next(); {
+	fmt.Println("in lexOutsideArray")
+
+	// expecting either ',', ']' or '}'
+	switch r := l.peek(); {
 	case r == comma:
 		return lexComma
 	case r == rightMeta:
 		return lexRightMeta
+	case r == rightBracket:
+		return lexRightBracket
 	}
 
 	return l.errorf("invalid element after right bracket")
 }
 
 func lexComma(l *lexer) stateFunc {
+	fmt.Println("in lexComma")
+
 	l.pos += len(",")
 	l.emit(itemComma)
 
 	// either Number, String, Identifier, '[' or '{'
-	switch r := l.next(); {
+	switch r := l.peek(); {
 	case isNumeric(r):
-		l.backup()
 		return lexNumber
 	case r == quotationMark:
-		l.backup()
 		return lexString
 	case isAlphaNumeric(r):
 		return lexIdentifier
 	case r == leftBracket:
-		l.backup()
 		return lexLeftBracket
 	case r == leftMeta:
-		l.backup()
 		return lexLeftMeta
 	}
 	return l.errorf("invalid element after comma")
 }
 
 func lexNumber(l *lexer) stateFunc {
+	fmt.Println("in lexNumber")
+
 	// Optional leading sign.
 	l.accept("+-")
 	// Is it hex?
@@ -156,7 +160,7 @@ func lexNumber(l *lexer) stateFunc {
 	l.emit(itemNumber)
 
 	// expecting either ',' ']', '}'
-	switch r := l.next(); {
+	switch r := l.peek(); {
 	case r == comma:
 		return lexComma
 	case r == rightBracket:
@@ -169,22 +173,27 @@ func lexNumber(l *lexer) stateFunc {
 }
 
 func lexString(l *lexer) stateFunc {
+	fmt.Println("in lexString")
 
 	// string opening quotation mark
-	l.accept("\"")
+	if !l.accept("\"") {
+		l.errorf("string should be enclosed with quotation marks")
+	}
 
 	// consume string
 	// TODO deal with escaping. (\")
-	for strings.IndexRune("\"", l.next()) < 0 {
-	}
+	alphanumeric := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+	l.acceptRun(alphanumeric)
 
 	// string closing quotation mark
-	l.accept("\"")
+	if !l.accept("\"") {
+		l.errorf("string should be enclosed with quotation marks")
+	}
 
 	l.emit(itemString)
 
 	// Expecting either ',' , ']' or '}'
-	switch r := l.next(); {
+	switch r := l.peek(); {
 	case r == comma:
 		return lexComma
 	case r == rightBracket:
@@ -197,6 +206,8 @@ func lexString(l *lexer) stateFunc {
 }
 
 func lexIdentifier(l *lexer) stateFunc {
+	fmt.Println("in lexIdentifier")
+
 	// identifier must begin with an alphnumeric character
 	characters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	if !l.accept(characters) {
@@ -212,13 +223,13 @@ func lexIdentifier(l *lexer) stateFunc {
 		return l.errorf("identifier must end with ':'")
 	}
 
+	l.emit(itemIdentifier)
+
 	// expecting either String, Number '[' or '{'
-	switch r := l.next(); {
+	switch r := l.peek(); {
 	case isNumeric(r):
-		l.backup()
 		return lexNumber
 	case r == quotationMark:
-		l.backup()
 		return lexString
 	case r == leftBracket:
 		return lexLeftBracket

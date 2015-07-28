@@ -1,4 +1,4 @@
-package json_parser
+package main
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ type lexer struct {
 	items chan item // channel of scanned items.
 }
 
-func Lex(name, input string) (*lexer, chan item) {
+func lex(name, input string) (*lexer, chan item) {
 	l := &lexer{
 		name:  name,
 		input: input,
