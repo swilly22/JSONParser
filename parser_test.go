@@ -27,6 +27,32 @@ func TestLexEmptyObject(t *testing.T) {
 	validateTokens(expectedToken, emittedTokens, t)
 }
 
+func TestLexEmptyObjects(t *testing.T) {
+	expectedToken := []itemType{itemLeftMeta,
+		itemIdentifier, itemLeftMeta,
+		itemIdentifier, itemLeftMeta,
+		itemIdentifier, itemLeftMeta,
+		itemIdentifier, itemLeftMeta,
+		itemRightMeta, itemRightMeta, itemRightMeta, itemRightMeta, itemRightMeta}
+	emittedTokens := lexJSON("{a:{b:{c:{d:{}}}}}")
+	validateTokens(expectedToken, emittedTokens, t)
+}
+
+func TestLexEmptyArray(t *testing.T) {
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemLeftBracket, itemRightBracket, itemRightMeta}
+	emittedTokens := lexJSON("{a:[]}")
+	validateTokens(expectedToken, emittedTokens, t)
+}
+
+func TestLexEmptyArrays(t *testing.T) {
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier,
+		itemLeftBracket, itemLeftBracket, itemLeftBracket, itemLeftBracket, itemLeftBracket,
+		itemRightBracket, itemRightBracket, itemRightBracket, itemRightBracket, itemRightBracket,
+		itemRightMeta}
+	emittedTokens := lexJSON("{a:[[[[[]]]]]}")
+	validateTokens(expectedToken, emittedTokens, t)
+}
+
 func TestLexNumericIdentifier(t *testing.T) {
 	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemNumber, itemRightMeta}
 	JSON := "{a:1}"
@@ -41,16 +67,16 @@ func TestLexStringIdentifier(t *testing.T) {
 	validateTokens(expectedToken, emittedTokens, t)
 }
 
-func TestLexArrayIdentifier(t *testing.T) {
-	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemLeftBracket, itemNumber, itemComma, itemNumber, itemComma, itemNumber, itemRightBracket, itemRightMeta}
-	JSON := "{a:[1,2,3]}"
+func TestLexTwoIdentifiers(t *testing.T) {
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemNumber, itemComma, itemIdentifier, itemString, itemRightMeta}
+	JSON := "{a:1,b:\"value\"}"
 	emittedTokens := lexJSON(JSON)
 	validateTokens(expectedToken, emittedTokens, t)
 }
 
-func TestLexTwoIdentifiers(t *testing.T) {
-	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemNumber, itemComma, itemIdentifier, itemString, itemRightMeta}
-	JSON := "{a:1,b:\"value\"}"
+func TestLexArrayIdentifier(t *testing.T) {
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemLeftBracket, itemNumber, itemComma, itemNumber, itemComma, itemNumber, itemRightBracket, itemRightMeta}
+	JSON := "{a:[1,2,3]}"
 	emittedTokens := lexJSON(JSON)
 	validateTokens(expectedToken, emittedTokens, t)
 }
@@ -92,7 +118,7 @@ func TestObjectWithinObject(t *testing.T) {
 func lexJSON(JSON string) []itemType {
 	emittedTokens := make([]itemType, 0)
 
-	_, tokens := lex("MyJSON", JSON)
+	_, tokens := lex("TestJSON", JSON)
 
 	for t := range tokens {
 		emittedTokens = append(emittedTokens, t.typ)
