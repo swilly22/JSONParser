@@ -58,7 +58,7 @@ func (l *lexer) ignore() {
 	l.start = l.pos
 }
 
-// backup steps bacl one rune.
+// backup steps back one rune.
 // Can be called only once per call of next.
 func (l *lexer) backup() {
 	l.pos -= l.width

@@ -34,9 +34,13 @@ const (
 	itemLeftBracket
 	itemRightBracket
 	itemIdentifier
+	itemColon
 	itemNumber
 	itemString
 	itemComma
+	itemTrue
+	itemFalse
+	itemNull
 	itemEOF
 )
 
@@ -48,4 +52,5 @@ const (
 	rightBracket  = ']'
 	comma         = ','
 	quotationMark = '"'
+	colon         = ':'
 )

@@ -58,6 +58,7 @@ func lexOutsideObject(l *lexer) stateFunc {
 	switch r := l.peek(); {
 	case r == eof:
 		// we're done
+		l.emit(itemEOF)
 		return nil
 	case r == comma:
 		return lexComma
@@ -88,7 +89,7 @@ func lexRightBracket(l *lexer) stateFunc {
 func lexInsideArray(l *lexer) stateFunc {
 	fmt.Println("in lexInsideArray")
 
-	// expecting either Number, String, '[', ']', '{'
+	// expecting either Number, String, True, False, Null, '[', ']' or '{'
 	switch r := l.peek(); {
 	case isNumeric(r):
 		return lexNumber
@@ -100,6 +101,12 @@ func lexInsideArray(l *lexer) stateFunc {
 		return lexRightBracket
 	case r == leftBracket:
 		return lexLeftBracket
+	case isTrue(l) == true:
+		return lexTrue
+	case isFalse(l) == true:
+		return lexFalse
+	case isNull(l) == true:
+		return lexNull
 	}
 
 	return l.errorf("invalid element inside array")
@@ -127,18 +134,24 @@ func lexComma(l *lexer) stateFunc {
 	l.pos += len(",")
 	l.emit(itemComma)
 
-	// either Number, String, Identifier, '[' or '{'
+	// either Number, String, True, False, Null, Identifier, '[' or '{'
 	switch r := l.peek(); {
 	case isNumeric(r):
 		return lexNumber
 	case r == quotationMark:
 		return lexString
-	case isAlphaNumeric(r):
-		return lexIdentifier
 	case r == leftBracket:
 		return lexLeftBracket
 	case r == leftMeta:
 		return lexLeftMeta
+	case isTrue(l) == true:
+		return lexTrue
+	case isFalse(l) == true:
+		return lexFalse
+	case isNull(l) == true:
+		return lexNull
+	case isAlphaNumeric(r):
+		return lexIdentifier
 	}
 	return l.errorf("invalid element after comma")
 }
@@ -205,6 +218,63 @@ func lexString(l *lexer) stateFunc {
 	return l.errorf("invalid element after string")
 }
 
+func lexTrue(l *lexer) stateFunc {
+	fmt.Println("in lexTrue")
+	l.pos += len("true")
+
+	l.emit(itemTrue)
+
+	// Expecting either ',' , ']' or '}'
+	switch r := l.peek(); {
+	case r == comma:
+		return lexComma
+	case r == rightBracket:
+		return lexRightBracket
+	case r == rightMeta:
+		return lexRightMeta
+	}
+
+	return l.errorf("invalid element after string")
+}
+
+func lexFalse(l *lexer) stateFunc {
+	fmt.Println("in lexFalse")
+	l.pos += len("false")
+
+	l.emit(itemFalse)
+
+	// Expecting either ',' , ']' or '}'
+	switch r := l.peek(); {
+	case r == comma:
+		return lexComma
+	case r == rightBracket:
+		return lexRightBracket
+	case r == rightMeta:
+		return lexRightMeta
+	}
+
+	return l.errorf("invalid element after string")
+}
+
+func lexNull(l *lexer) stateFunc {
+	fmt.Println("in lexNull")
+	l.pos += len("null")
+
+	l.emit(itemNull)
+
+	// Expecting either ',' , ']' or '}'
+	switch r := l.peek(); {
+	case r == comma:
+		return lexComma
+	case r == rightBracket:
+		return lexRightBracket
+	case r == rightMeta:
+		return lexRightMeta
+	}
+
+	return l.errorf("invalid element after string")
+}
+
 func lexIdentifier(l *lexer) stateFunc {
 	fmt.Println("in lexIdentifier")
 
@@ -218,14 +288,22 @@ func lexIdentifier(l *lexer) stateFunc {
 	alphanumeric := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 	l.acceptRun(alphanumeric)
 
-	// identifier must end with ':'
-	if !l.accept(":") {
-		return l.errorf("identifier must end with ':'")
-	}
-
 	l.emit(itemIdentifier)
 
-	// expecting either String, Number '[' or '{'
+	// identifier must end with ':'
+	switch r := l.peek(); {
+	case r == colon:
+		return lexColon
+	}
+	return l.errorf("identifier must be followed by a colon")
+}
+
+func lexColon(l *lexer) stateFunc {
+	fmt.Println("in lexColon")
+	l.accept(":")
+	l.emit(itemColon)
+
+	// expecting either String, Number, True, False, Null, '[' or '{'
 	switch r := l.peek(); {
 	case isNumeric(r):
 		return lexNumber
@@ -235,7 +313,13 @@ func lexIdentifier(l *lexer) stateFunc {
 		return lexLeftBracket
 	case r == leftMeta:
 		return lexLeftMeta
+	case isTrue(l) == true:
+		return lexTrue
+	case isFalse(l) == true:
+		return lexFalse
+	case isNull(l) == true:
+		return lexNull
 	}
 
-	return l.errorf("incalud element after identifier")
+	return l.errorf("missing value after colon")
 }

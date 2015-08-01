@@ -22,70 +22,96 @@ func validateTokens(expectedToken, emittedTokens []itemType, t *testing.T) bool 
 }
 
 func TestLexEmptyObject(t *testing.T) {
-	expectedToken := []itemType{itemLeftMeta, itemRightMeta}
+	expectedToken := []itemType{itemLeftMeta, itemRightMeta, itemEOF}
 	emittedTokens := lexJSON("{}")
 	validateTokens(expectedToken, emittedTokens, t)
 }
 
 func TestLexEmptyObjects(t *testing.T) {
 	expectedToken := []itemType{itemLeftMeta,
-		itemIdentifier, itemLeftMeta,
-		itemIdentifier, itemLeftMeta,
-		itemIdentifier, itemLeftMeta,
-		itemIdentifier, itemLeftMeta,
-		itemRightMeta, itemRightMeta, itemRightMeta, itemRightMeta, itemRightMeta}
+		itemIdentifier, itemColon, itemLeftMeta,
+		itemIdentifier, itemColon, itemLeftMeta,
+		itemIdentifier, itemColon, itemLeftMeta,
+		itemIdentifier, itemColon, itemLeftMeta,
+		itemRightMeta, itemRightMeta, itemRightMeta, itemRightMeta, itemRightMeta, itemEOF}
 	emittedTokens := lexJSON("{a:{b:{c:{d:{}}}}}")
 	validateTokens(expectedToken, emittedTokens, t)
 }
 
 func TestLexEmptyArray(t *testing.T) {
-	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemLeftBracket, itemRightBracket, itemRightMeta}
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemColon, itemLeftBracket, itemRightBracket, itemRightMeta, itemEOF}
 	emittedTokens := lexJSON("{a:[]}")
 	validateTokens(expectedToken, emittedTokens, t)
 }
 
 func TestLexEmptyArrays(t *testing.T) {
-	expectedToken := []itemType{itemLeftMeta, itemIdentifier,
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemColon,
 		itemLeftBracket, itemLeftBracket, itemLeftBracket, itemLeftBracket, itemLeftBracket,
 		itemRightBracket, itemRightBracket, itemRightBracket, itemRightBracket, itemRightBracket,
-		itemRightMeta}
+		itemRightMeta, itemEOF}
 	emittedTokens := lexJSON("{a:[[[[[]]]]]}")
 	validateTokens(expectedToken, emittedTokens, t)
 }
 
 func TestLexNumericIdentifier(t *testing.T) {
-	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemNumber, itemRightMeta}
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemColon, itemNumber, itemRightMeta, itemEOF}
 	JSON := "{a:1}"
 	emittedTokens := lexJSON(JSON)
 	validateTokens(expectedToken, emittedTokens, t)
 }
 
 func TestLexStringIdentifier(t *testing.T) {
-	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemString, itemRightMeta}
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemColon, itemString, itemRightMeta, itemEOF}
 	JSON := "{b:\"value\"}"
 	emittedTokens := lexJSON(JSON)
 	validateTokens(expectedToken, emittedTokens, t)
 }
 
+func TestLexTrueIdentifier(t *testing.T) {
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemColon, itemTrue, itemRightMeta, itemEOF}
+	JSON := "{a:true}"
+	emittedTokens := lexJSON(JSON)
+	validateTokens(expectedToken, emittedTokens, t)
+}
+
+func TestLexFalseIdentifier(t *testing.T) {
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemColon, itemFalse, itemRightMeta, itemEOF}
+	JSON := "{a:false}"
+	emittedTokens := lexJSON(JSON)
+	validateTokens(expectedToken, emittedTokens, t)
+}
+
+func TestLexNullIdentifier(t *testing.T) {
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemColon, itemNull, itemRightMeta, itemEOF}
+	JSON := "{a:null}"
+	emittedTokens := lexJSON(JSON)
+	validateTokens(expectedToken, emittedTokens, t)
+}
+
 func TestLexTwoIdentifiers(t *testing.T) {
-	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemNumber, itemComma, itemIdentifier, itemString, itemRightMeta}
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemColon, itemNumber, itemComma, itemIdentifier, itemColon, itemString, itemRightMeta, itemEOF}
 	JSON := "{a:1,b:\"value\"}"
 	emittedTokens := lexJSON(JSON)
 	validateTokens(expectedToken, emittedTokens, t)
 }
 
 func TestLexArrayIdentifier(t *testing.T) {
-	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemLeftBracket, itemNumber, itemComma, itemNumber, itemComma, itemNumber, itemRightBracket, itemRightMeta}
-	JSON := "{a:[1,2,3]}"
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemColon, itemLeftBracket,
+		itemNumber, itemComma,
+		itemTrue, itemComma,
+		itemFalse, itemComma,
+		itemNull,
+		itemRightBracket, itemRightMeta, itemEOF}
+	JSON := "{a:[1,true,false,null]}"
 	emittedTokens := lexJSON(JSON)
 	validateTokens(expectedToken, emittedTokens, t)
 }
 
 func TestLexArrayOfObjects(t *testing.T) {
-	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemLeftBracket,
-		itemLeftMeta, itemIdentifier, itemNumber, itemRightMeta, itemComma,
-		itemLeftMeta, itemIdentifier, itemNumber, itemRightMeta,
-		itemRightBracket, itemRightMeta}
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemColon, itemLeftBracket,
+		itemLeftMeta, itemIdentifier, itemColon, itemNumber, itemRightMeta, itemComma,
+		itemLeftMeta, itemIdentifier, itemColon, itemNumber, itemRightMeta,
+		itemRightBracket, itemRightMeta, itemEOF}
 
 	JSON := "{myObjects:[{a:1},{b:2}]}"
 	emittedTokens := lexJSON(JSON)
@@ -93,12 +119,12 @@ func TestLexArrayOfObjects(t *testing.T) {
 }
 
 func TestArrayOfArrays(t *testing.T) {
-	expectedToken := []itemType{itemLeftMeta, itemIdentifier,
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemColon,
 		itemLeftBracket,
 		itemLeftBracket, itemNumber, itemComma, itemNumber, itemRightBracket, itemComma,
 		itemLeftBracket, itemNumber, itemComma, itemNumber, itemRightBracket,
 		itemRightBracket,
-		itemRightMeta}
+		itemRightMeta, itemEOF}
 
 	JSON := "{arrays:[[1,2],[3,4]]}"
 	emittedTokens := lexJSON(JSON)
@@ -106,10 +132,10 @@ func TestArrayOfArrays(t *testing.T) {
 }
 
 func TestObjectWithinObject(t *testing.T) {
-	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemLeftMeta,
-		itemIdentifier, itemNumber, itemComma,
-		itemIdentifier, itemString,
-		itemRightMeta, itemRightMeta}
+	expectedToken := []itemType{itemLeftMeta, itemIdentifier, itemColon, itemLeftMeta,
+		itemIdentifier, itemColon, itemNumber, itemComma,
+		itemIdentifier, itemColon, itemString,
+		itemRightMeta, itemRightMeta, itemEOF}
 	JSON := "{obj:{a:1,b:\"s\"}}"
 	emittedTokens := lexJSON(JSON)
 	validateTokens(expectedToken, emittedTokens, t)
